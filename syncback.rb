@@ -62,16 +62,27 @@ module SyncBack
     diff_1_2, diff_2_1 = diff(folder_pair)
     
     # copy 1 to 2
+    entry_index = 1
+    entries = diff_1_2.length
     diff_1_2.each do |entry|
       src = folder_pair.folder_1 + "/" + entry
       dest = folder_pair.folder_2 + "/" + entry
       FileUtils.cp(src, dest)
+      # report to GUI
+      yield entry_index, entries, src, dest
+      entry_index += 1
     end
+
     # copy 2 to 1
+    entry_index = 1
+    entries = diff_1_2.length
     diff_2_1.each do |entry|
       src = folder_pair.folder_2 + "/" + entry
       dest = folder_pair.folder_1 + "/" + entry
       FileUtils.cp(src, dest)
+      # report to GUI
+      yield entry_index, entries, src, dest
+      entry_index += 1
     end
   end
 end

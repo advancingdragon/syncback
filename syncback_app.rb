@@ -38,10 +38,17 @@ Shoes.app(:title => "Synchronize",
       button("Add") { add_folder_pair }
       button("Synchronize") do
         folder_pairs = get_linked_folders
-        diff_1_2, diff_2_1 = SyncBack.diff(folder_pairs[0])
-        alert diff_1_2
-        alert diff_2_1
+        diff_1_2, diff_2_1 = SyncBack.synchronize(folder_pairs[0]) do |entry_index, entries, src, dest|
+          @progress.contents[0].text = entry_index.to_s + " out of " + entries.to_s + " files copied."
+          @progress.contents[1].text = "From " + src
+          @progress.contents[2].text = "to " + dest
+        end
       end
+    end
+    @progress = flow do
+      para ""
+      para ""
+      para ""
     end
   end
 
