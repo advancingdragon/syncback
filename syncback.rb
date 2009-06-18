@@ -12,33 +12,27 @@ module SyncBack
     end
   end
 
+  # NOTE: This function only looks at filenames, not at the files'
+  # content. It assumes that two files/folders with the same name and
+  # relative path are the same.
+  #
   # Finds the differences between two folders.
   def self.diff(folder_pair)
-    diff_hash = {}
-    common = []
-    diff_1_2 = []
-    diff_2_1 = []
+    folder_1_entries = Dir.entries(folder_pair.folder_1)
+    folder_2_entries = Dir.entries(folder_pair.folder_2)
 
-    Dir.foreach(folder_pair.folder_1) do |entry|
-      diff_hash[entry] = false
+    diff_1_2 = folder_1_entries - folder_2_entries
+    diff_2_1 = folder_2_entries - folder_1_entries
+    common = folder_1_entries & folder_2_entries
+
+    # filter out non-directories and the . and .. directories
+    common.delete_if do |entry|
+      entry == "." or
+      entry == ".." or
+      not File.directory?(folder_pair.folder_1 + "/" + entry) or
+      not File.directory?(folder_pair.folder_2 + "/" + entry)
     end
-    # find files/subfolders that are in folder 2 but not in folder 1
-    Dir.foreach(folder_pair.folder_2) do |entry|
-      diff_2_1 << entry if not diff_hash.has_key?(entry)
-      diff_hash[entry] = true
-    end
-    diff_hash.each do |entry, flag|
-      # find files/subfolders that are in folder 1 but not in folder 2
-      diff_1_2 << entry if not flag
-      # find common subfolders
-      if flag and 
-          File.directory?(folder_pair.folder_1 + "/" + entry) and 
-          File.directory?(folder_pair.folder_2 + "/" + entry) and 
-          entry != ".." and entry != "." # exclude the . and .. folders
-        common << entry 
-      end
-    end
-    
+
     # recurse in common subfolders
     common.each do |subfolder|
       subfolder_1 = folder_pair.folder_1 + "/" + subfolder
@@ -61,25 +55,25 @@ module SyncBack
   def self.synchronize(folder_pair)
     diff_1_2, diff_2_1 = diff(folder_pair)
     
-    # copy 1 to 2
+    # keep count of completed files
     entry_index = 1
-    entries = diff_1_2.length
+    entries = diff_1_2.length + diff_2_1.length
+
+    # copy 1 to 2
     diff_1_2.each do |entry|
       src = folder_pair.folder_1 + "/" + entry
       dest = folder_pair.folder_2 + "/" + entry
-      FileUtils.cp(src, dest)
+      FileUtils.cp_r(src, dest)
       # report to GUI
       yield entry_index, entries, src, dest
       entry_index += 1
     end
 
     # copy 2 to 1
-    entry_index = 1
-    entries = diff_1_2.length
     diff_2_1.each do |entry|
       src = folder_pair.folder_2 + "/" + entry
       dest = folder_pair.folder_1 + "/" + entry
-      FileUtils.cp(src, dest)
+      FileUtils.cp_r(src, dest)
       # report to GUI
       yield entry_index, entries, src, dest
       entry_index += 1
